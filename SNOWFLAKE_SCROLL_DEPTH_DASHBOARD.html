@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기획전 스크롤 뎁스 분석 대시보드 (Snowflake)</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', 'Segoe UI', sans-serif;
+            background: #ffffff;
+            padding: 30px;
+            color: #1a1a1a;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .header h1 {
+            color: #1a1a1a;
+            font-size: 2.4em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .table-container {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            overflow-x: auto;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 30px;
+        }
+
+        .table-container h2 {
+            color: #1a1a1a;
+            font-size: 1.5em;
+            margin-bottom: 18px;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #f8f9ff;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .chart-container {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            border: 1px solid #e5e7eb;
+            margin-bottom: 30px;
+        }
+
+        .chart-container h2 {
+            color: #1a1a1a;
+            font-size: 1.5em;
+            margin-bottom: 24px;
+            font-weight: 700;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .insights-container {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            border: 1px solid #e5e7eb;
+            margin-bottom: 30px;
+        }
+
+        .insights-container h2 {
+            color: #1a1a1a;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .insight-card {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .insight-card.excellent {
+            background: #dcfce7;
+            border-left-color: #22c55e;
+        }
+
+        .insight-card.warning {
+            background: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+
+        .insight-card.alert {
+            background: #fee2e2;
+            border-left-color: #ef4444;
+        }
+
+        .insight-card h3 {
+            color: #1a1a1a;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .insight-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insight-card li {
+            color: #374151;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 8px;
+            padding-left: 8px;
+        }
+
+        .insight-card strong {
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        /* 탭 스타일 */
+        .tabs {
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            margin-bottom: 30px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+
+        .tab-buttons {
+            display: flex;
+            background: #f8f9ff;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            font-family: 'Pretendard', 'Segoe UI', sans-serif;
+        }
+
+        .tab-button:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            background: #ffffff;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 TOP 5 기획전 스크롤 뎁스 분석 대시보드</h1>
+            <p style="color:#6b7280; font-weight:500;">기간: 2025년 12월 8일 ~ 12월 14일 (Snowflake 데이터)</p>
+            <p style="color:#6b7280; font-size:0.9em; margin-top:5px;">페이지뷰 기준 TOP 5 기획전의 스크롤 참여도 분석</p>
+        </div>
+
+        <!-- 탭 -->
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('X')">
+                    🔵 디스커버리 (X)
+                </button>
+                <button class="tab-button" onclick="switchTab('M')">
+                    ⚾ MLB (M)
+                </button>
+                <button class="tab-button" onclick="switchTab('V')">
+                    🧥 듀베티카 (V)
+                </button>
+                <button class="tab-button" onclick="switchTab('ST')">
+                    🏷️ ST (ST)
+                </button>
+            </div>
+        </div>
+
+        <!-- X 브랜드 (디스커버리) 탭 -->
+        <div id="tab-X" class="tab-content active">
+            <div class="insights-container">
+                <h2>💡 핵심 인사이트</h2>
+                <div id="insightsContentX"></div>
+            </div>
+
+            <div class="table-container">
+                <h2>🏆 TOP 5 기획전 스크롤 뎁스 통계</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>순위</th>
+                            <th>기획전 번호</th>
+                            <th>페이지 제목</th>
+                            <th>페이지뷰</th>
+                            <th>25% 도달</th>
+                            <th>50% 도달</th>
+                            <th>75% 도달</th>
+                            <th>95% 도달</th>
+                            <th>스크롤 이벤트</th>
+                            <th>95% 도달률</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scrollDepthTableBodyX"></tbody>
+                </table>
+            </div>
+
+            <div class="chart-container">
+                <h2>📊 TOP 5 기획전별 스크롤 뎁스 비교 차트</h2>
+                <div class="chart-wrapper">
+                    <canvas id="scrollDepthChartX"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- M 브랜드 (MLB) 탭 -->
+        <div id="tab-M" class="tab-content">
+            <div class="insights-container">
+                <h2>💡 핵심 인사이트</h2>
+                <div id="insightsContentM"></div>
+            </div>
+
+            <div class="table-container">
+                <h2>🏆 TOP 5 기획전 스크롤 뎁스 통계</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>순위</th>
+                            <th>기획전 번호</th>
+                            <th>페이지 제목</th>
+                            <th>페이지뷰</th>
+                            <th>25% 도달</th>
+                            <th>50% 도달</th>
+                            <th>75% 도달</th>
+                            <th>95% 도달</th>
+                            <th>스크롤 이벤트</th>
+                            <th>95% 도달률</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scrollDepthTableBodyM"></tbody>
+                </table>
+            </div>
+
+            <div class="chart-container">
+                <h2>📊 TOP 5 기획전별 스크롤 뎁스 비교 차트</h2>
+                <div class="chart-wrapper">
+                    <canvas id="scrollDepthChartM"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- V 브랜드 (듀베티카) 탭 -->
+        <div id="tab-V" class="tab-content">
+            <div class="insights-container">
+                <h2>💡 핵심 인사이트</h2>
+                <div id="insightsContentV"></div>
+            </div>
+
+            <div class="table-container">
+                <h2>🏆 TOP 5 기획전 스크롤 뎁스 통계</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>순위</th>
+                            <th>기획전 번호</th>
+                            <th>페이지 제목</th>
+                            <th>페이지뷰</th>
+                            <th>25% 도달</th>
+                            <th>50% 도달</th>
+                            <th>75% 도달</th>
+                            <th>95% 도달</th>
+                            <th>스크롤 이벤트</th>
+                            <th>95% 도달률</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scrollDepthTableBodyV"></tbody>
+                </table>
+            </div>
+
+            <div class="chart-container">
+                <h2>📊 TOP 5 기획전별 스크롤 뎁스 비교 차트</h2>
+                <div class="chart-wrapper">
+                    <canvas id="scrollDepthChartV"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ST 브랜드 탭 -->
+        <div id="tab-ST" class="tab-content">
+            <div class="insights-container">
+                <h2>💡 핵심 인사이트</h2>
+                <div id="insightsContentST"></div>
+            </div>
+
+            <div class="table-container">
+                <h2>🏆 TOP 5 기획전 스크롤 뎁스 통계</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>순위</th>
+                            <th>기획전 번호</th>
+                            <th>페이지 제목</th>
+                            <th>페이지뷰</th>
+                            <th>25% 도달</th>
+                            <th>50% 도달</th>
+                            <th>75% 도달</th>
+                            <th>95% 도달</th>
+                            <th>스크롤 이벤트</th>
+                            <th>95% 도달률</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scrollDepthTableBodyST"></tbody>
+                </table>
+            </div>
+
+            <div class="chart-container">
+                <h2>📊 TOP 5 기획전별 스크롤 뎁스 비교 차트</h2>
+                <div class="chart-wrapper">
+                    <canvas id="scrollDepthChartST"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scrollDepthDataX = [
+            {
+                        "promotion_number": "1512",
+                        "promotion_name": "기획전 #1512",
+                        "page_title": "디스커버리 익스페디션 - 겨울 스타일을 완성하는 윈터 부츠",
+                        "page_views": 214338,
+                        "depth_25": 49592,
+                        "depth_50": 29408,
+                        "depth_75": 15082,
+                        "depth_95": 9492,
+                        "total_events": 103574
+            },
+            {
+                        "promotion_number": "1574",
+                        "promotion_name": "기획전 #1574",
+                        "page_title": "디스커버리 익스페디션 - The Premium Winter Down",
+                        "page_views": 116234,
+                        "depth_25": 21862,
+                        "depth_50": 17065,
+                        "depth_75": 8368,
+                        "depth_95": 5390,
+                        "total_events": 52685
+            },
+            {
+                        "promotion_number": "1549",
+                        "promotion_name": "기획전 #1549",
+                        "page_title": "디스커버리 익스페디션 - 시그니처 사파리 구스다운, 밀포드 베르텍스",
+                        "page_views": 92738,
+                        "depth_25": 14569,
+                        "depth_50": 11635,
+                        "depth_75": 8281,
+                        "depth_95": 4502,
+                        "total_events": 38987
+            },
+            {
+                        "promotion_number": "1514",
+                        "promotion_name": "기획전 #1514",
+                        "page_title": "디스커버리 익스페디션 - 프리미엄 라이프스타일을 위한 레스터G",
+                        "page_views": 83110,
+                        "depth_25": 17855,
+                        "depth_50": 8804,
+                        "depth_75": 4380,
+                        "depth_95": 2699,
+                        "total_events": 33738
+            },
+            {
+                        "promotion_number": "1548",
+                        "promotion_name": "기획전 #1548",
+                        "page_title": "디스커버리 익스페디션 - 빛나는 겨울을 위한 프리미엄 키즈 아우터",
+                        "page_views": 47810,
+                        "depth_25": 8323,
+                        "depth_50": 2266,
+                        "depth_75": 1317,
+                        "depth_95": 986,
+                        "total_events": 12892
+            }
+];
+        const scrollDepthDataM = [
+            {
+                        "promotion_number": "1520",
+                        "promotion_name": "기획전 #1520",
+                        "page_title": "엠엘비 코리아 - 카리나의 겨울 실루엣 CURVE THE WINTER",
+                        "page_views": 74936,
+                        "depth_25": 4732,
+                        "depth_50": 3427,
+                        "depth_75": 2699,
+                        "depth_95": 2505,
+                        "total_events": 13363
+            },
+            {
+                        "promotion_number": "1571",
+                        "promotion_name": "기획전 #1571",
+                        "page_title": "엠엘비 코리아 - LITE ON, MOVE ON! MLB KIDS 신학기 책가방",
+                        "page_views": 35442,
+                        "depth_25": 6784,
+                        "depth_50": 3675,
+                        "depth_75": 2191,
+                        "depth_95": 1878,
+                        "total_events": 14528
+            },
+            {
+                        "promotion_number": "1557",
+                        "promotion_name": "기획전 #1557",
+                        "page_title": "엠엘비 코리아 - 카리나 PICK! 플러시 미야옹 비니 리스탁",
+                        "page_views": 35282,
+                        "depth_25": 2869,
+                        "depth_50": 1935,
+                        "depth_75": 1656,
+                        "depth_95": 1475,
+                        "total_events": 7935
+            },
+            {
+                        "promotion_number": "1570",
+                        "promotion_name": "기획전 #1570",
+                        "page_title": "엠엘비 코리아 - WINTER’S HEAT WAVE SHOES COLLECTION",
+                        "page_views": 24126,
+                        "depth_25": 5590,
+                        "depth_50": 3980,
+                        "depth_75": 2652,
+                        "depth_95": 1530,
+                        "total_events": 13752
+            },
+            {
+                        "promotion_number": "1576",
+                        "promotion_name": "기획전 #1576",
+                        "page_title": "엠엘비 코리아 - Gift for Love THANKS WEEK",
+                        "page_views": 14486,
+                        "depth_25": 2016,
+                        "depth_50": 1195,
+                        "depth_75": 645,
+                        "depth_95": 434,
+                        "total_events": 4290
+            }
+];
+        const scrollDepthDataV = [
+            {
+                        "promotion_number": "1587",
+                        "promotion_name": "기획전 #1587",
+                        "page_title": "듀베티카 공식 온라인몰 - WINTER MOMENT with Ki Eunse - COLLECTION",
+                        "page_views": 160778,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1555",
+                        "promotion_name": "기획전 #1555",
+                        "page_title": "듀베티카 공식 온라인몰 - DUVETICA with Kim Jiwon - COLLECTION",
+                        "page_views": 122630,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1537",
+                        "promotion_name": "기획전 #1537",
+                        "page_title": "듀베티카 공식 온라인몰 - FIOCCA THE ICON OF WINTER - COLLECTION",
+                        "page_views": 29420,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1545",
+                        "promotion_name": "기획전 #1545",
+                        "page_title": "듀베티카 공식 온라인몰 - THE SIGNATURE TEXTURES - COLLECTION",
+                        "page_views": 21464,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1479",
+                        "promotion_name": "기획전 #1479",
+                        "page_title": "듀베티카 공식 온라인몰 - EURIPEDE, A CURATED LIFESTYLE - COLLECTION",
+                        "page_views": 13860,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            }
+];
+        const scrollDepthDataST = [
+            {
+                        "promotion_number": "1552",
+                        "promotion_name": "기획전 #1552",
+                        "page_title": "Sergio Tacchini 공식 온라인몰 - Feature | WINTER Fleece Moment",
+                        "page_views": 3786,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1546",
+                        "promotion_name": "기획전 #1546",
+                        "page_title": "Sergio Tacchini 공식 온라인몰 - Feature | Park Ji-hyun with Tacchini Winter Down",
+                        "page_views": 1846,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1536",
+                        "promotion_name": "기획전 #1536",
+                        "page_title": "Sergio Tacchini 공식 온라인몰 - Feature | Urban Fleece collection",
+                        "page_views": 1746,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1538",
+                        "promotion_name": "기획전 #1538",
+                        "page_title": "Sergio Tacchini 공식 온라인몰 - Feature | Winter Down for Active Lifestyles",
+                        "page_views": 1716,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            },
+            {
+                        "promotion_number": "1573",
+                        "promotion_name": "기획전 #1573",
+                        "page_title": "Sergio Tacchini 공식 온라인몰 - Feature | Winter Texture Down",
+                        "page_views": 762,
+                        "depth_25": 0,
+                        "depth_50": 0,
+                        "depth_75": 0,
+                        "depth_95": 0,
+                        "total_events": 0
+            }
+];
+        
+        let chartX = null;
+        let chartM = null;
+        let chartV = null;
+        let chartST = null;
+
+        function getShortTitle(pageTitle, brand) {
+            if (!pageTitle) return '';
+            // X 브랜드: "디스커버리 익스페디션 - " 제거
+            if (brand === 'X') {
+                const prefix = '디스커버리 익스페디션 - ';
+                if (pageTitle.startsWith(prefix)) {
+                    return pageTitle.substring(prefix.length);
+                }
+            }
+            // M 브랜드: "엠엘비 코리아 - " 제거
+            else if (brand === 'M') {
+                const prefix = '엠엘비 코리아 - ';
+                if (pageTitle.startsWith(prefix)) {
+                    return pageTitle.substring(prefix.length);
+                }
+            }
+            // V 브랜드: "듀베티카 - " 제거
+            else if (brand === 'V') {
+                const prefix = '듀베티카 - ';
+                if (pageTitle.startsWith(prefix)) {
+                    return pageTitle.substring(prefix.length);
+                }
+            }
+            // ST 브랜드: 접두사 제거 (필요시 수정)
+            else if (brand === 'ST') {
+                // ST 브랜드의 접두사는 데이터 확인 후 추가
+                return pageTitle;
+            }
+            return pageTitle;
+        }
+
+        function switchTab(brand) {
+            // 탭 버튼 활성화
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 탭 콘텐츠 표시
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${brand}`).classList.add('active');
+        }
+
+        function renderInsights(scrollDepthData, brand) {
+            if (!scrollDepthData || scrollDepthData.length === 0) {
+                const insightsContent = document.getElementById(`insightsContent${brand}`);
+                if (insightsContent) {
+                    insightsContent.innerHTML = '<p style="color:#999; text-align:center; padding:40px;">조회된 데이터가 없습니다.</p>';
+                }
+                return;
+            }
+
+            const insightsContent = document.getElementById(`insightsContent${brand}`);
+            
+            // 데이터 분석
+            const bestOverall = scrollDepthData.reduce((best, item) => {
+                const rate95 = item.total_events > 0 ? (item.depth_95 / item.total_events * 100) : 0;
+                const bestRate95 = best.total_events > 0 ? (best.depth_95 / best.total_events * 100) : 0;
+                return rate95 > bestRate95 ? item : best;
+            }, scrollDepthData[0]);
+
+            const bestParticipation = scrollDepthData.reduce((best, item) => {
+                const participation = item.page_views > 0 ? (item.total_events / item.page_views * 100) : 0;
+                const bestParticipationRate = best.page_views > 0 ? (best.total_events / best.page_views * 100) : 0;
+                return participation > bestParticipationRate ? item : best;
+            }, scrollDepthData[0]);
+
+            const worstDropoff = scrollDepthData.map(item => {
+                const rate25 = item.total_events > 0 ? (item.depth_25 / item.total_events * 100) : 0;
+                const rate50 = item.total_events > 0 ? (item.depth_50 / item.total_events * 100) : 0;
+                const dropoff = rate25 - rate50;
+                return {...item, dropoff};
+            }).reduce((worst, item) => item.dropoff > worst.dropoff ? item : worst);
+
+            const bestStable = scrollDepthData.map(item => {
+                const rate25 = item.total_events > 0 ? (item.depth_25 / item.total_events * 100) : 0;
+                const rate50 = item.total_events > 0 ? (item.depth_50 / item.total_events * 100) : 0;
+                const stability = rate25 - rate50; // 낮을수록 안정적
+                return {...item, stability};
+            }).reduce((best, item) => item.stability < best.stability ? item : best);
+
+            const worstFinal = scrollDepthData.reduce((worst, item) => {
+                const rate95 = item.total_events > 0 ? (item.depth_95 / item.total_events * 100) : 0;
+                const worstRate95 = worst.total_events > 0 ? (worst.depth_95 / worst.total_events * 100) : 0;
+                return rate95 < worstRate95 ? item : worst;
+            }, scrollDepthData[0]);
+
+            const bestRate95 = bestOverall.total_events > 0 ? (bestOverall.depth_95 / bestOverall.total_events * 100).toFixed(1) : 0;
+            const bestParticipationRate = bestParticipation.page_views > 0 ? (bestParticipation.total_events / bestParticipation.page_views * 100).toFixed(1) : 0;
+            const worstDropoffRate = worstDropoff.dropoff.toFixed(1);
+            const bestStabilityRate = bestStable.stability.toFixed(1);
+            const worstFinalRate = worstFinal.total_events > 0 ? (worstFinal.depth_95 / worstFinal.total_events * 100).toFixed(1) : 0;
+
+            // 페이지 제목 추출 (브랜드별 접두사 제거)
+            const bestOverallTitle = getShortTitle(bestOverall.page_title || '', brand);
+            const bestParticipationTitle = getShortTitle(bestParticipation.page_title || '', brand);
+            const worstDropoffTitle = getShortTitle(worstDropoff.page_title || '', brand);
+            const worstFinalTitle = getShortTitle(worstFinal.page_title || '', brand);
+
+            insightsContent.innerHTML = `
+                <div class="insight-grid">
+                    <div class="insight-card excellent">
+                        <h3>⭐ 우수 사례 - 최고 도달률</h3>
+                        <ul>
+                            <li><strong>${bestOverall.promotion_name}</strong></li>
+                            <li>${bestOverallTitle ? '<span style="color:#667eea;">' + bestOverallTitle + '</span>' : ''}</li>
+                            <li>최종 도달률(95%): <strong>${bestRate95}%</strong></li>
+                            <li>안정적인 스크롤 패턴으로 벤치마크로 활용 권장</li>
+                            <li>초-중반 구간 이탈률이 낮아 참여 유지 효과적</li>
+                        </ul>
+                    </div>
+
+                    <div class="insight-card excellent">
+                        <h3>🚀 우수 사례 - 높은 참여도</h3>
+                        <ul>
+                            <li><strong>${bestParticipation.promotion_name}</strong></li>
+                            <li>${bestParticipationTitle ? '<span style="color:#667eea;">' + bestParticipationTitle + '</span>' : ''}</li>
+                            <li>스크롤 참여도: <strong>${bestParticipationRate}%</strong></li>
+                            <li>페이지뷰 대비 스크롤 이벤트 비율이 가장 높음</li>
+                            <li>초기 화면 구성이 사용자의 스크롤 의욕을 효과적으로 자극</li>
+                        </ul>
+                    </div>
+
+                    <div class="insight-card warning">
+                        <h3>⚠️ 개선 필요 - 급격한 중반 이탈</h3>
+                        <ul>
+                            <li><strong>${worstDropoff.promotion_name}</strong></li>
+                            <li>${worstDropoffTitle ? '<span style="color:#667eea;">' + worstDropoffTitle + '</span>' : ''}</li>
+                            <li>25-50% 구간 이탈률: <strong>${worstDropoffRate}%p</strong></li>
+                            <li>초반 참여는 높으나 중반 구간에서 급격한 이탈 발생</li>
+                            <li>25-50% 구간 콘텐츠 재구성 및 CTA 배치 최적화 필요</li>
+                        </ul>
+                    </div>
+
+                    <div class="insight-card alert">
+                        <h3>🔴 개선 필요 - 낮은 최종 도달률</h3>
+                        <ul>
+                            <li><strong>${worstFinal.promotion_name}</strong></li>
+                            <li>${worstFinalTitle ? '<span style="color:#667eea;">' + worstFinalTitle + '</span>' : ''}</li>
+                            <li>최종 도달률(95%): <strong>${worstFinalRate}%</strong></li>
+                            <li>후반부 콘텐츠 개선 및 최종 구간 강화 필요</li>
+                            <li>75-95% 구간에 강력한 CTA 배치 권장</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: #f8f9ff; padding: 20px; border-radius: 12px; margin-top: 20px;">
+                    <h3 style="color: #1a1a1a; font-size: 1.1em; margin-bottom: 12px; font-weight: 600;">📋 기획전 제작 권장사항</h3>
+                    <ul style="list-style: none; padding: 0; color: #374151; line-height: 1.8;">
+                        <li style="margin-bottom: 8px;">✅ <strong>25-50% 구간 집중 관리</strong>: 이탈률이 가장 높은 구간으로 시각적 변화나 인터랙티브 요소 권장</li>
+                        <li style="margin-bottom: 8px;">✅ <strong>섹션별 콘텐츠 밀도 균형</strong>: ${bestOverall.promotion_name}의 안정적인 패턴을 벤치마크로 활용</li>
+                        <li style="margin-bottom: 8px;">✅ <strong>중간 구간 시각적 변화</strong>: 스크롤 이벤트, 애니메이션 등으로 재미 요소 추가</li>
+                        <li style="margin-bottom: 8px;">✅ <strong>후반부 CTA 강화</strong>: 완독한 사용자는 높은 구매 의도로 최종 전환을 위한 CTA 배치</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function renderTable(scrollDepthData, brand) {
+            const tbody = document.getElementById(`scrollDepthTableBody${brand}`);
+            
+            if (!scrollDepthData || scrollDepthData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px; color:#999;">조회된 데이터가 없습니다.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = scrollDepthData.map((item, index) => {
+                const total = item.total_events || 0;
+                const depth25Rate = total > 0 ? (item.depth_25 / total * 100).toFixed(1) : 0;
+                const depth50Rate = total > 0 ? (item.depth_50 / total * 100).toFixed(1) : 0;
+                const depth75Rate = total > 0 ? (item.depth_75 / total * 100).toFixed(1) : 0;
+                const depth95Rate = total > 0 ? (item.depth_95 / total * 100).toFixed(1) : 0;
+                
+                // 페이지 제목에서 브랜드별 접두사 제거
+                const shortTitle = getShortTitle(item.page_title || '', brand);
+                
+                return `
+                    <tr>
+                        <td><strong>#${index + 1}</strong></td>
+                        <td><strong>${item.promotion_name}</strong></td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.page_title || ''}">
+                            ${shortTitle}
+                        </td>
+                        <td>${item.page_views.toLocaleString()}</td>
+                        <td>${item.depth_25.toLocaleString()}<br><span style="color:#999; font-size:0.9em;">(${depth25Rate}%)</span></td>
+                        <td>${item.depth_50.toLocaleString()}<br><span style="color:#999; font-size:0.9em;">(${depth50Rate}%)</span></td>
+                        <td>${item.depth_75.toLocaleString()}<br><span style="color:#999; font-size:0.9em;">(${depth75Rate}%)</span></td>
+                        <td>${item.depth_95.toLocaleString()}<br><span style="color:#999; font-size:0.9em;">(${depth95Rate}%)</span></td>
+                        <td><strong>${total.toLocaleString()}</strong></td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${depth95Rate}%"></div>
+                            </div>
+                            <span style="font-size:0.9em; color:#667eea;">${depth95Rate}%</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderChart(scrollDepthData, brand) {
+            const ctx = document.getElementById(`scrollDepthChart${brand}`);
+            if (!ctx) return;
+            
+            // 기존 차트가 있으면 제거
+            if (brand === 'X' && chartX) {
+                chartX.destroy();
+            } else if (brand === 'M' && chartM) {
+                chartM.destroy();
+            } else if (brand === 'V' && chartV) {
+                chartV.destroy();
+            } else if (brand === 'ST' && chartST) {
+                chartST.destroy();
+            }
+            
+            if (!scrollDepthData || scrollDepthData.length === 0) {
+                return;
+            }
+            
+            const chartCtx = ctx.getContext('2d');
+            const promotionNumbers = scrollDepthData.map(item => item.promotion_name);
+            const depth25Data = scrollDepthData.map(item => item.depth_25);
+            const depth50Data = scrollDepthData.map(item => item.depth_50);
+            const depth75Data = scrollDepthData.map(item => item.depth_75);
+            const depth95Data = scrollDepthData.map(item => item.depth_95);
+            
+            const newChart = new Chart(chartCtx, {
+                type: 'bar',
+                data: {
+                    labels: promotionNumbers,
+                    datasets: [
+                        {
+                            label: '25% 도달',
+                            data: depth25Data,
+                            backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '50% 도달',
+                            data: depth50Data,
+                            backgroundColor: 'rgba(118, 75, 162, 0.6)',
+                            borderColor: 'rgba(118, 75, 162, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '75% 도달',
+                            data: depth75Data,
+                            backgroundColor: 'rgba(237, 100, 166, 0.6)',
+                            borderColor: 'rgba(237, 100, 166, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '95% 도달',
+                            data: depth95Data,
+                            backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '기획전별 스크롤 뎁스 도달 수'
+                        }
+                    }
+                }
+            });
+            
+            // 차트 객체 저장
+            if (brand === 'X') {
+                chartX = newChart;
+            } else if (brand === 'M') {
+                chartM = newChart;
+            } else if (brand === 'V') {
+                chartV = newChart;
+            } else if (brand === 'ST') {
+                chartST = newChart;
+            }
+        }
+
+        // 페이지 로드 시 렌더링
+        // X 브랜드 (디스커버리) 렌더링
+        renderInsights(scrollDepthDataX, 'X');
+        renderTable(scrollDepthDataX, 'X');
+        renderChart(scrollDepthDataX, 'X');
+        
+        // M 브랜드 (MLB) 렌더링
+        renderInsights(scrollDepthDataM, 'M');
+        renderTable(scrollDepthDataM, 'M');
+        renderChart(scrollDepthDataM, 'M');
+        
+        // V 브랜드 (듀베티카) 렌더링
+        renderInsights(scrollDepthDataV, 'V');
+        renderTable(scrollDepthDataV, 'V');
+        renderChart(scrollDepthDataV, 'V');
+        
+        // ST 브랜드 렌더링
+        renderInsights(scrollDepthDataST, 'ST');
+        renderTable(scrollDepthDataST, 'ST');
+        renderChart(scrollDepthDataST, 'ST');
+    </script>
+</body>
+</html>
