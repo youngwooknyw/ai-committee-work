@@ -1407,6 +1407,27 @@
                 return match ? match[1] : '';
             };
             
+            // 기획전 URL 생성 함수
+            const getPromotionUrl = (promotionNumber) => {
+                if (!promotionNumber) return '';
+                if (brand === 'X') {
+                    return `https://www.discovery-expedition.com/display/promotions/collection/${promotionNumber}`;
+                } else if (brand === 'M') {
+                    return `https://www.mlb-korea.com/display/promotions/collection/${promotionNumber}`;
+                } else if (brand === 'V') {
+                    return `https://www.duvetica.co.kr/display/archive/collection/${promotionNumber}`;
+                }
+                return '';
+            };
+            
+            // 기획전 이름에 링크 추가 함수
+            const getPromotionLink = (promotionName, promotionNumber) => {
+                if (!promotionName || !promotionNumber) return promotionName || '';
+                const url = getPromotionUrl(promotionNumber);
+                if (!url) return promotionName;
+                return `<a href="${url}" target="_blank" style="color:#667eea; text-decoration:underline;">${promotionName}</a>`;
+            };
+            
             let scrollDepthInsights = '';
             let performanceInsights = '';
             let productsInsights = '';
@@ -1447,6 +1468,11 @@
                 const bestParticipationTitle = getShortTitleHelper(bestParticipation.page_title);
                 const worstDropoffTitle = getShortTitleHelper(worstDropoff.page_title);
                 const worstFinalTitle = getShortTitleHelper(worstFinal.page_title);
+                
+                const bestOverallLink = getPromotionLink(bestOverall.promotion_name, bestOverall.promotion_number);
+                const bestParticipationLink = getPromotionLink(bestParticipation.promotion_name, bestParticipation.promotion_number);
+                const worstDropoffLink = getPromotionLink(worstDropoff.promotion_name, worstDropoff.promotion_number);
+                const worstFinalLink = getPromotionLink(worstFinal.promotion_name, worstFinal.promotion_number);
 
                 scrollDepthInsights = `
                     <div style="margin-bottom: 30px;">
@@ -1457,7 +1483,7 @@
                             <div class="insight-card excellent">
                                 <h3>⭐ 우수 사례 - 최고 도달률</h3>
                                 <ul>
-                                    <li><strong>${bestOverall.promotion_name}</strong></li>
+                                    <li><strong>${bestOverallLink}</strong></li>
                                     <li>${bestOverallTitle ? '<span style="color:#667eea;">' + bestOverallTitle + '</span>' : ''}</li>
                                     <li>최종 도달률(95%): <strong>${bestRate95}%</strong></li>
                                     <li>안정적인 스크롤 패턴으로 벤치마크로 활용 권장</li>
@@ -1468,7 +1494,7 @@
                             <div class="insight-card excellent">
                                 <h3>🚀 우수 사례 - 높은 참여도</h3>
                                 <ul>
-                                    <li><strong>${bestParticipation.promotion_name}</strong></li>
+                                    <li><strong>${bestParticipationLink}</strong></li>
                                     <li>${bestParticipationTitle ? '<span style="color:#667eea;">' + bestParticipationTitle + '</span>' : ''}</li>
                                     <li>스크롤 참여도: <strong>${bestParticipationRate}%</strong></li>
                                     <li>페이지뷰 대비 스크롤 이벤트 비율이 가장 높음</li>
@@ -1479,7 +1505,7 @@
                             <div class="insight-card warning">
                                 <h3>⚠️ 개선 필요 - 급격한 중반 이탈</h3>
                                 <ul>
-                                    <li><strong>${worstDropoff.promotion_name}</strong></li>
+                                    <li><strong>${worstDropoffLink}</strong></li>
                                     <li>${worstDropoffTitle ? '<span style="color:#667eea;">' + worstDropoffTitle + '</span>' : ''}</li>
                                     <li>25-50% 구간 이탈률: <strong>${worstDropoffRate}%p</strong></li>
                                     <li>초반 참여는 높으나 중반 구간에서 급격한 이탈 발생</li>
@@ -1490,7 +1516,7 @@
                             <div class="insight-card alert">
                                 <h3>🔴 개선 필요 - 낮은 최종 도달률</h3>
                                 <ul>
-                                    <li><strong>${worstFinal.promotion_name}</strong></li>
+                                    <li><strong>${worstFinalLink}</strong></li>
                                     <li>${worstFinalTitle ? '<span style="color:#667eea;">' + worstFinalTitle + '</span>' : ''}</li>
                                     <li>최종 도달률(95%): <strong>${worstFinalRate}%</strong></li>
                                     <li>후반부 콘텐츠 개선 및 최종 구간 강화 필요</li>
@@ -1533,20 +1559,24 @@
                 const bestRevenueTitle = getShortTitleHelper(bestRevenue.page_title);
                 const bestRevenuePromo = getPromotionNumber(bestRevenue.page_location || '');
                 const bestRevenuePromoName = bestRevenuePromo ? `기획전 #${bestRevenuePromo}` : '';
+                const bestRevenueLink = bestRevenue.page_location ? `<a href="${bestRevenue.page_location}" target="_blank" style="color:#667eea; text-decoration:underline;">${bestRevenuePromoName}</a>` : bestRevenuePromoName;
 
                 const bestConversionTitle = getShortTitleHelper(bestConversion.page_title);
                 const bestConversionPromo = getPromotionNumber(bestConversion.page_location || '');
                 const bestConversionPromoName = bestConversionPromo ? `기획전 #${bestConversionPromo}` : '';
+                const bestConversionLink = bestConversion.page_location ? `<a href="${bestConversion.page_location}" target="_blank" style="color:#667eea; text-decoration:underline;">${bestConversionPromoName}</a>` : bestConversionPromoName;
                 const bestConversionRate = bestConversion.conversionRate ? bestConversion.conversionRate.toFixed(2) : '0.00';
 
                 const worstConversionTitle = getShortTitleHelper(worstConversion.page_title);
                 const worstConversionPromo = getPromotionNumber(worstConversion.page_location || '');
                 const worstConversionPromoName = worstConversionPromo ? `기획전 #${worstConversionPromo}` : '';
+                const worstConversionLink = worstConversion.page_location ? `<a href="${worstConversion.page_location}" target="_blank" style="color:#667eea; text-decoration:underline;">${worstConversionPromoName}</a>` : worstConversionPromoName;
                 const worstConversionRate = worstConversion.conversionRate ? worstConversion.conversionRate.toFixed(2) : '0.00';
 
                 const worstRevenueTitle = getShortTitleHelper(worstRevenue.page_title);
                 const worstRevenuePromo = getPromotionNumber(worstRevenue.page_location || '');
                 const worstRevenuePromoName = worstRevenuePromo ? `기획전 #${worstRevenuePromo}` : '';
+                const worstRevenueLink = worstRevenue.page_location ? `<a href="${worstRevenue.page_location}" target="_blank" style="color:#667eea; text-decoration:underline;">${worstRevenuePromoName}</a>` : worstRevenuePromoName;
 
                 performanceInsights = `
                     <div style="margin-bottom: 30px;">
@@ -1557,7 +1587,7 @@
                             <div class="insight-card excellent">
                                 <h3>💰 우수 사례 - 최고 매출</h3>
                                 <ul>
-                                    <li><strong>${bestRevenuePromoName}</strong></li>
+                                    <li><strong>${bestRevenueLink}</strong></li>
                                     <li>${bestRevenueTitle ? '<span style="color:#667eea;">' + bestRevenueTitle + '</span>' : ''}</li>
                                     <li>매출: <strong>₩${Math.round(bestRevenue.revenue || 0).toLocaleString()}</strong></li>
                                     <li>구매 이벤트: <strong>${(bestRevenue.purchase_events || 0).toLocaleString()}건</strong></li>
@@ -1568,7 +1598,7 @@
                             <div class="insight-card excellent">
                                 <h3>📈 우수 사례 - 최고 구매 전환율</h3>
                                 <ul>
-                                    <li><strong>${bestConversionPromoName}</strong></li>
+                                    <li><strong>${bestConversionLink}</strong></li>
                                     <li>${bestConversionTitle ? '<span style="color:#667eea;">' + bestConversionTitle + '</span>' : ''}</li>
                                     <li>구매 전환율: <strong>${bestConversionRate}%</strong></li>
                                     <li>상품 조회 대비 구매 전환이 가장 효율적</li>
@@ -1579,7 +1609,7 @@
                             <div class="insight-card warning">
                                 <h3>⚠️ 개선 필요 - 낮은 구매 전환율</h3>
                                 <ul>
-                                    <li><strong>${worstConversionPromoName}</strong></li>
+                                    <li><strong>${worstConversionLink}</strong></li>
                                     <li>${worstConversionTitle ? '<span style="color:#667eea;">' + worstConversionTitle + '</span>' : ''}</li>
                                     <li>구매 전환율: <strong>${worstConversionRate}%</strong></li>
                                     <li>상품 조회 대비 구매 전환이 낮음</li>
@@ -1590,7 +1620,7 @@
                             <div class="insight-card alert">
                                 <h3>🔴 개선 필요 - 낮은 매출</h3>
                                 <ul>
-                                    <li><strong>${worstRevenuePromoName}</strong></li>
+                                    <li><strong>${worstRevenueLink}</strong></li>
                                     <li>${worstRevenueTitle ? '<span style="color:#667eea;">' + worstRevenueTitle + '</span>' : ''}</li>
                                     <li>매출: <strong>₩${Math.round(worstRevenue.revenue || 0).toLocaleString()}</strong></li>
                                     <li>구매 이벤트: <strong>${(worstRevenue.purchase_events || 0).toLocaleString()}건</strong></li>
@@ -1632,9 +1662,11 @@
 
                     const bestPromoNum = getPromotionNumber(bestProductViews.pageLocation);
                     const bestPromoName = bestPromoNum ? `기획전 #${bestPromoNum}` : '';
+                    const bestPromoLink = getPromotionLink(bestPromoName, bestPromoNum);
 
                     const worstPromoNum = getPromotionNumber(worstProductViews.pageLocation);
                     const worstPromoName = worstPromoNum ? `기획전 #${worstPromoNum}` : '';
+                    const worstPromoLink = getPromotionLink(worstPromoName, worstPromoNum);
 
                     productsInsights = `
                         <div style="margin-bottom: 30px;">
@@ -1645,7 +1677,7 @@
                                 <div class="insight-card excellent">
                                     <h3>🔍 우수 사례 - 높은 상품 관심도</h3>
                                     <ul>
-                                        <li><strong>${bestPromoName}</strong></li>
+                                        <li><strong>${bestPromoLink}</strong></li>
                                         <li>${bestProductViews.topProduct ? '<span style="color:#667eea;">' + bestProductViews.topProduct + '</span>' : ''}</li>
                                         <li>총 상품 조회 이벤트: <strong>${bestProductViews.totalViews.toLocaleString()}건</strong></li>
                                         <li>상품 개수: <strong>${bestProductViews.productCount}개</strong></li>
@@ -1657,7 +1689,7 @@
                                 <div class="insight-card alert">
                                     <h3>🔴 개선 필요 - 낮은 상품 관심도</h3>
                                     <ul>
-                                        <li><strong>${worstPromoName}</strong></li>
+                                        <li><strong>${worstPromoLink}</strong></li>
                                         <li>${worstProductViews.topProduct ? '<span style="color:#667eea;">' + worstProductViews.topProduct + '</span>' : ''}</li>
                                         <li>총 상품 조회 이벤트: <strong>${worstProductViews.totalViews.toLocaleString()}건</strong></li>
                                         <li>상품 개수: <strong>${worstProductViews.productCount}개</strong></li>
@@ -1697,11 +1729,28 @@
                 // 페이지 제목에서 브랜드별 접두사 제거
                 const shortTitle = getShortTitle(item.page_title || '', brand);
                 
+                // 기획전 번호 추출 및 URL 생성
+                const promotionNumber = item.promotion_number || '';
+                let promotionLink = item.promotion_name || '';
+                if (promotionNumber) {
+                    let baseUrl = '';
+                    if (brand === 'X') {
+                        baseUrl = `https://www.discovery-expedition.com/display/promotions/collection/${promotionNumber}`;
+                    } else if (brand === 'M') {
+                        baseUrl = `https://www.mlb-korea.com/display/promotions/collection/${promotionNumber}`;
+                    } else if (brand === 'V') {
+                        baseUrl = `https://www.duvetica.co.kr/display/archive/collection/${promotionNumber}`;
+                    }
+                    if (baseUrl) {
+                        promotionLink = `<a href="${baseUrl}" target="_blank" style="color:#667eea; text-decoration:underline;">${item.promotion_name}</a>`;
+                    }
+                }
+                
                 return `
                     <tr>
                         <td><strong>#${index + 1}</strong></td>
                         <td style="max-width: 300px;">
-                            <strong>${item.promotion_name}</strong><br>
+                            <strong>${promotionLink}</strong><br>
                             <span style="font-size:0.9em; color:#6b7280; line-height:1.4;" title="${item.page_title || ''}">
                                 ${shortTitle}
                             </span>
@@ -1842,6 +1891,9 @@
                 // page_location에서 기획전 번호 추출
                 const promotionNumber = getPromotionNumber(item.page_location || '');
                 const promotionName = promotionNumber ? `기획전 #${promotionNumber}` : '';
+                const promotionLink = item.page_location && promotionNumber ? 
+                    `<a href="${item.page_location}" target="_blank" style="color:#667eea; text-decoration:underline;">${promotionName}</a>` : 
+                    promotionName;
                 
                 // X, M, V 브랜드인 경우 토글 버튼 추가
                 const toggleButton = (brand === 'X' || brand === 'M' || brand === 'V') && promotionNumber ? 
@@ -1872,7 +1924,7 @@
                     <tr>
                         <td><strong>#${index + 1}</strong></td>
                         <td style="max-width: 300px;">
-                            <strong>${promotionName}</strong>${toggleButton}<br>
+                            <strong>${promotionLink}</strong>${toggleButton}<br>
                             <span style="font-size:0.9em; color:#6b7280; line-height:1.4;" title="${item.page_title || ''}">
                                 ${shortTitle}
                             </span>
