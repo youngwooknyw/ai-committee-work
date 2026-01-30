@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>디스커버리 홈 랜딩 대시보드</title>
+  <title>DX 자사몰 EVENT 대시보드</title>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -40,23 +40,6 @@
       color: #cbd5e1;
     }
 
-    .kpi-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .kpi-card {
-      background: rgba(30, 41, 59, 0.6);
-      padding: 20px 22px;
-      border-radius: 14px;
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      backdrop-filter: blur(6px);
-    }
-    .kpi-card .label { color: #94a3b8; font-size: 0.85em; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-    .kpi-card .value { font-size: 1.85em; font-weight: 800; color: #f8fafc; }
-    .kpi-card .value.sub { font-size: 1.35em; color: #38bdf8; }
-
     .section {
       background: rgba(30, 41, 59, 0.5);
       padding: 24px 28px;
@@ -69,9 +52,14 @@
       font-size: 1.2em;
       font-weight: 700;
       color: #f1f5f9;
-      margin-bottom: 18px;
+      margin-bottom: 8px;
       padding-bottom: 10px;
       border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .section-desc {
+      color: #94a3b8;
+      font-size: 0.9em;
+      margin-bottom: 16px;
     }
     .chart-wrap { position: relative; height: 280px; }
     .chart-wrap canvas { max-height: 280px; }
@@ -125,29 +113,29 @@
 <body>
   <div class="container">
     <header class="header">
-      <h1>홈 랜딩 대시보드</h1>
-      <p class="desc" id="header-desc">홈 랜딩 세션(특정 소스/매체) 일자별 매출 &amp; 구매 세션</p>
+      <h1>DX 자사몰 EVENT 대시보드</h1>
       <div class="meta" id="header-meta"></div>
     </header>
 
-    <div class="kpi-row" id="kpi-row"></div>
-
     <section class="section">
-      <h2>일자별 이탈률</h2>
+      <h2>이탈률 추이</h2>
+      <p class="section-desc">홈 화면 랜딩 세션 기준 이탈률 추이</p>
       <div class="chart-wrap">
         <canvas id="chart-bounce-rate"></canvas>
       </div>
     </section>
 
     <section class="section">
-      <h2>일자별 전환율 (채널별)</h2>
+      <h2>전환율 추이</h2>
+      <p class="section-desc">홈 화면 주요 랜딩 매체별 전환율 추이</p>
       <div class="chart-wrap">
         <canvas id="chart-cvr"></canvas>
       </div>
     </section>
 
     <section class="section">
-      <h2>일자별 기획전 유입 비중</h2>
+      <h2>기획전 유입 비중</h2>
+      <p class="section-desc">홈 화면 랜딩 이후 기획전별 유입 비중 추이</p>
       <div id="chart-promo-legend" class="promo-legend-wrap"></div>
       <div class="chart-wrap">
         <canvas id="chart-promo"></canvas>
@@ -155,14 +143,17 @@
     </section>
 
     <section class="section">
-      <h2>일자별 메인탭 메뉴 클릭</h2>
+      <h2>메인탭 메뉴별 클릭 추이</h2>
+      <p class="section-desc">홈 화면 랜딩 이후 메인탭 메뉴별 클릭 추이</p>
       <div class="chart-wrap">
         <canvas id="chart-maintab"></canvas>
       </div>
     </section>
 
     <section class="section">
-      <h2>일자별 하단 카테고리(categorymenu) 클릭 후 이동 페이지</h2>
+      <h2>메뉴 버튼 클릭 후 이동 페이지 추이</h2>
+      <p class="section-desc">하단 카테고리 바에서 메뉴 버튼 클릭 이후 이동 페이지 추이</p>
+      <div id="chart-bottomnav-legend" class="promo-legend-wrap"></div>
       <div class="chart-wrap">
         <canvas id="chart-bottomnav"></canvas>
       </div>
@@ -179,6 +170,10 @@
         if (!yyyymmdd || yyyymmdd.length < 8) return yyyymmdd;
         return yyyymmdd.slice(0,4) + '-' + yyyymmdd.slice(4,6) + '-' + yyyymmdd.slice(6,8);
       }
+      function formatDateShort(yyyymmdd) {
+        if (!yyyymmdd || yyyymmdd.length < 8) return yyyymmdd;
+        return yyyymmdd.slice(4,6) + '-' + yyyymmdd.slice(6,8);
+      }
       function formatNum(n) { return Number(n).toLocaleString(); }
 
       function render() {
@@ -189,29 +184,13 @@
         const bounceData = d.bounce_rate?.data || [];
         const revenueData = d.revenue?.data || [];
 
-        document.getElementById('header-desc').textContent = '홈 랜딩 이탈률 · 매출/전환 (채널별)';
         document.getElementById('header-meta').innerHTML =
-          '<span class="pill">' + (brand || '') + '</span>' +
           '<span class="pill">' + (period?.start_date_formatted || '') + ' ~ ' + (period?.end_date_formatted || '') + '</span>';
         document.getElementById('footer-meta').textContent =
           '데이터 출처: ' + (period?.start_date_formatted || '') + ' ~ ' + (period?.end_date_formatted || '') + ' · ' + (brand || '');
 
-        const totalBounceLanding = bounceData.reduce((s, r) => s + (r.home_landing_sessions || 0), 0);
-        const totalBounce = bounceData.reduce((s, r) => s + (r.bounce_sessions || 0), 0);
-        const avgBounceRate = bounceData.length ? bounceData.reduce((s, r) => s + (r.bounce_rate || 0), 0) / bounceData.length : 0;
-        const totalLanding = revenueData.reduce((s, r) => s + (r.landing_sessions || 0), 0);
-        const totalPurchasing = revenueData.reduce((s, r) => s + (r.purchasing_sessions || 0), 0);
-        const totalRevenue = revenueData.reduce((s, r) => s + (r.revenue || 0), 0);
-        const avgCvr = revenueData.length ? revenueData.reduce((s, r) => s + (r.session_cvr_pct || 0), 0) / revenueData.length : 0;
-
-        document.getElementById('kpi-row').innerHTML =
-          '<div class="kpi-card"><div class="label">평균 이탈률</div><div class="value sub">' + avgBounceRate.toFixed(2) + '%</div></div>' +
-          '<div class="kpi-card"><div class="label">총 랜딩 세션</div><div class="value">' + formatNum(totalLanding) + '</div></div>' +
-          '<div class="kpi-card"><div class="label">총 구매 세션</div><div class="value">' + formatNum(totalPurchasing) + '</div></div>' +
-          '<div class="kpi-card"><div class="label">총 매출</div><div class="value">' + formatNum(Math.round(totalRevenue)) + '</div></div>';
-
         if (bounceData.length) {
-          const brLabels = bounceData.map(r => formatDate(r.date));
+          const brLabels = bounceData.map(r => formatDateShort(r.date));
           const brValues = bounceData.map(r => r.bounce_rate);
           const ctxBr = document.getElementById('chart-bounce-rate').getContext('2d');
           if (window.chartBounce) window.chartBounce.destroy();
@@ -237,8 +216,8 @@
                 legend: { display: false },
                 annotation: {
                   annotations: {
-                    line1: { type: 'line', xMin: '2026-01-20', xMax: '2026-01-20', borderColor: 'rgba(34, 197, 94, 0.6)', borderWidth: 1, borderDash: [3, 3], label: { display: true, content: '1/20 홈화면 개편', position: 'start', backgroundColor: 'rgba(34, 197, 94, 0.8)', color: '#fff', font: { size: 10, weight: '600' }, padding: 4, borderRadius: 4 } },
-                    line2: { type: 'line', xMin: '2026-01-27', xMax: '2026-01-27', borderColor: 'rgba(251, 146, 60, 0.6)', borderWidth: 1, borderDash: [3, 3], label: { display: true, content: '1/27 여성 탭 1순위 노출', position: 'start', backgroundColor: 'rgba(251, 146, 60, 0.8)', color: '#fff', font: { size: 10, weight: '600' }, padding: 4, borderRadius: 4 } }
+                    line1: { type: 'line', xMin: '01-20', xMax: '01-20', borderColor: 'rgba(34, 197, 94, 0.6)', borderWidth: 1, borderDash: [3, 3], label: { display: true, content: '1/20 홈화면 개편', position: 'start', backgroundColor: 'rgba(34, 197, 94, 0.8)', color: '#fff', font: { size: 10, weight: '600' }, padding: 4, borderRadius: 4 } },
+                    line2: { type: 'line', xMin: '01-27', xMax: '01-27', borderColor: 'rgba(251, 146, 60, 0.6)', borderWidth: 1, borderDash: [3, 3], label: { display: true, content: '1/27 여성 탭 1순위 노출', position: 'start', backgroundColor: 'rgba(251, 146, 60, 0.8)', color: '#fff', font: { size: 10, weight: '600' }, padding: 4, borderRadius: 4 } }
                   }
                 }
               },
@@ -253,7 +232,7 @@
         if (!revenueData.length || !revenueData[0].channel) return;
 
         const dates = [...new Set(revenueData.map(r => r.date))].sort();
-        const labels = dates.map(dt => formatDate(dt));
+        const labels = dates.map(dt => formatDateShort(dt));
         const channels = ['naver / brandsearch', '(direct) / (none)', 'google / pmax'];
         const colors = [
           { border: '#22c55e', fill: 'rgba(34, 197, 94, 0.15)' },
@@ -296,8 +275,8 @@
                 annotations: {
                   line1: {
                     type: 'line',
-                    xMin: '2026-01-20',
-                    xMax: '2026-01-20',
+                    xMin: '01-20',
+                    xMax: '01-20',
                     borderColor: 'rgba(34, 197, 94, 0.6)',
                     borderWidth: 1,
                     borderDash: [3, 3],
@@ -314,8 +293,8 @@
                   },
                   line2: {
                     type: 'line',
-                    xMin: '2026-01-27',
-                    xMax: '2026-01-27',
+                    xMin: '01-27',
+                    xMax: '01-27',
                     borderColor: 'rgba(251, 146, 60, 0.6)',
                     borderWidth: 1,
                     borderDash: [3, 3],
@@ -358,7 +337,7 @@
             promoByDate[dt][base] = (promoByDate[dt][base] || 0) + (r.event_cnt || 0);
           });
           const promoDates = Object.keys(promoByDate).sort();
-          const promoLabels = promoDates.map(dt => formatDate(dt));
+          const promoLabels = promoDates.map(dt => formatDateShort(dt));
           const allBases = {};
           promoData.forEach(r => {
             const b = r.page_location_base || '(no_base)';
@@ -427,27 +406,31 @@
             maintabByDate[dt][btn] = (r.click_cnt || 0);
           });
           const maintabDates = Object.keys(maintabByDate).sort();
-          const maintabLabels = maintabDates.map(dt => formatDate(dt));
+          const maintabLabels = maintabDates.map(dt => formatDateShort(dt));
           const allButtons = {};
           maintabData.forEach(r => {
             const b = r.button_text || '(unknown)';
             allButtons[b] = (allButtons[b] || 0) + (r.click_cnt || 0);
           });
           const topButtons = Object.entries(allButtons).sort((a,b) => b[1]-a[1]).slice(0, 6).map(x => x[0]);
-          const maintabColors = [
-            { border: '#22c55e', fill: 'rgba(34, 197, 94, 0.15)' },
-            { border: '#38bdf8', fill: 'rgba(56, 189, 248, 0.15)' },
-            { border: '#f59e0b', fill: 'rgba(245, 158, 11, 0.15)' },
-            { border: '#a78bfa', fill: 'rgba(167, 139, 250, 0.15)' },
-            { border: '#ec4899', fill: 'rgba(236, 72, 153, 0.15)' },
-            { border: '#14b8a6', fill: 'rgba(20, 184, 166, 0.15)' }
-          ];
+          const maintabColorMap = {
+            '남성': '#3b82f6',
+            '여성': '#ef4444',
+            '신발': '#22c55e',
+            '백팩': '#f59e0b',
+            '용품': '#a78bfa',
+            '키즈': '#14b8a6'
+          };
+          const maintabOtherColors = ['#ec4899', '#06b6d4', '#84cc16', '#f97316'];
+          const getMaintabColor = (btn, idx) => {
+            const label = (btn || '').replace(/^click_maintab_/, '') || btn;
+            return maintabColorMap[label] || maintabOtherColors[idx % maintabOtherColors.length];
+          };
           const maintabDatasets = topButtons.map((btn, i) => ({
             label: (btn || '').replace(/^click_maintab_/, '') || btn,
             data: maintabDates.map(dt => maintabByDate[dt][btn] ?? null),
-            borderColor: maintabColors[i % maintabColors.length].border,
-            backgroundColor: maintabColors[i % maintabColors.length].fill,
-            fill: true,
+            borderColor: getMaintabColor(btn, i),
+            fill: false,
             tension: 0.35,
             pointRadius: 3,
             pointHoverRadius: 5
@@ -462,7 +445,12 @@
               maintainAspectRatio: false,
               interaction: { mode: 'index', intersect: false },
               plugins: {
-                legend: { position: 'top', labels: { color: '#e2e8f0', usePointStyle: true, padding: 16 } }
+                legend: { position: 'top', labels: { color: '#e2e8f0', usePointStyle: true, padding: 16 } },
+                annotation: {
+                  annotations: {
+                    line2: { type: 'line', xMin: '01-27', xMax: '01-27', borderColor: 'rgba(251, 146, 60, 0.6)', borderWidth: 1, borderDash: [3, 3], label: { display: true, content: '1/27 여성 탭 1순위 노출', position: 'start', backgroundColor: 'rgba(251, 146, 60, 0.8)', color: '#fff', font: { size: 10, weight: '600' }, padding: 4, borderRadius: 4 } }
+                  }
+                }
               },
               scales: {
                 x: { grid: { color: 'rgba(148, 163, 184, 0.12)' }, ticks: { color: '#94a3b8', maxRotation: 45 } },
@@ -482,13 +470,19 @@
             bottomnavByDate[dt][page] = (bottomnavByDate[dt][page] || 0) + (r.move_cnt || 0);
           });
           const bottomnavDates = Object.keys(bottomnavByDate).sort();
-          const bottomnavLabels = bottomnavDates.map(dt => formatDate(dt));
+          const bottomnavLabels = bottomnavDates.map(dt => formatDateShort(dt));
           const allPages = {};
           bottomnavData.forEach(r => {
             const p = r.next_page || '(unknown)';
             allPages[p] = (allPages[p] || 0) + (r.move_cnt || 0);
           });
           const topPages = Object.entries(allPages).sort((a,b) => b[1]-a[1]).slice(0, 6).map(x => x[0]);
+          const pageToName = {};
+          bottomnavData.forEach(r => {
+            const p = r.next_page || '(unknown)';
+            const name = (r.next_page_name || '').trim();
+            if (name && !pageToName[p]) pageToName[p] = name;
+          });
           const shortPage = (url) => {
             const m = url.match(/\/collection\/(\d+)/);
             if (m) return m[1];
@@ -498,10 +492,29 @@
             if (displayMatch) return displayMatch[1];
             return path.slice(0, 30) + (path.length > 30 ? '…' : '');
           };
+          const getPageLabel = (page) => (pageToName[page] || shortPage(page)) || page;
           const top6Total = (dt) => topPages.reduce((s, p) => s + (bottomnavByDate[dt][p] || 0), 0);
           const bottomnavColors = ['#22c55e','#38bdf8','#f59e0b','#a78bfa','#ec4899','#14b8a6'];
+          const bottomnavLegendEl = document.getElementById('chart-bottomnav-legend');
+          if (bottomnavLegendEl) {
+            bottomnavLegendEl.innerHTML = topPages.map((page, i) => {
+              const label = getPageLabel(page);
+              const color = bottomnavColors[i % bottomnavColors.length];
+              const url = (page || '').replace(/"/g, '&quot;');
+              return '<button type="button" class="promo-legend-btn" data-url="' + url + '" title="페이지로 이동">' +
+                '<span class="dot" style="background:' + color + '"></span>' +
+                '<span>' + label + '</span>' +
+                '</button>';
+            }).join('');
+            bottomnavLegendEl.querySelectorAll('.promo-legend-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                if (url) window.open(url, '_blank');
+              });
+            });
+          }
           const bottomnavDatasets = topPages.map((page, i) => ({
-            label: shortPage(page),
+            label: getPageLabel(page),
             data: bottomnavDates.map(dt => {
               const total = top6Total(dt);
               const cnt = bottomnavByDate[dt][page] || 0;
@@ -519,7 +532,7 @@
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
-                legend: { position: 'top', labels: { color: '#e2e8f0', usePointStyle: true, padding: 12 } },
+                legend: { display: false },
                 tooltip: { callbacks: { label: c => c.label + ': ' + c.raw + '%' } }
               },
               scales: {
